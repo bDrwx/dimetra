@@ -3,6 +3,7 @@ persistence, and --watch-dir batch mode (including a call spanning two rotated
 files and the "don't reprocess" guarantee)."""
 import csv
 import json
+import sqlite3
 from pathlib import Path
 
 import text_log_parser as tlp
@@ -11,10 +12,12 @@ from fixtures.sample_lines import (
     CALL_STATE_CHANGE_CONNECTED,
     END_OF_CALL,
     INTERCONNECT_BILLING,
+    LOCATION_REGISTRATION,
     NON_BILLING_CONTROL_CHANNEL_UPDATE,
     START_OF_CALL_INDIVIDUAL,
 )
-from pipeline import load_checkpoint, process_file, run_batch, save_checkpoint
+from pipeline import load_checkpoint, process_file, run_batch, run_single_file_smoke_test, save_checkpoint
+import registration_store
 
 _CALL_ID = "83317"
 _START = START_OF_CALL_INDIVIDUAL.replace("83316", _CALL_ID)
@@ -55,6 +58,28 @@ class TestProcessFile:
         assert records == []
         assert exceptions == []
         assert _CALL_ID in correlator.open_calls
+
+    def test_registration_event_never_reaches_the_correlator(self, tmp_path: Path):
+        log = tmp_path / "log1.txt"
+        write_log(log, LOCATION_REGISTRATION)
+        correlator = CallCorrelator()
+        records, exceptions = process_file(log, correlator)
+        assert records == []
+        assert exceptions == []
+        assert correlator.open_calls == {}  # not tracked as an open call either
+
+    def test_registration_event_is_skipped_without_a_reg_conn(self, tmp_path: Path):
+        log = tmp_path / "log1.txt"
+        write_log(log, LOCATION_REGISTRATION)
+        process_file(log, CallCorrelator())  # reg_conn omitted -- must not raise
+
+    def test_registration_event_is_recorded_when_reg_conn_given(self, tmp_path: Path):
+        log = tmp_path / "log1.txt"
+        write_log(log, LOCATION_REGISTRATION)
+        conn = registration_store.connect(tmp_path / "regs.sqlite3")
+        process_file(log, CallCorrelator(), conn)
+        count = conn.execute("SELECT COUNT(*) FROM registrations").fetchone()[0]
+        assert count == 1
 
 
 class TestCheckpoint:
@@ -156,3 +181,57 @@ class TestRunBatch:
         run_batch(watch_dir, out, checkpoint, exceptions)
 
         assert not out.exists()
+
+    def test_registrations_written_to_db_alongside_billing_output(self, tmp_path: Path):
+        watch_dir = tmp_path / "logs"
+        watch_dir.mkdir()
+        write_log(watch_dir / "log1.txt", _START, _CONNECTED, _BILLING, _END, LOCATION_REGISTRATION)
+
+        out = tmp_path / "billing_export.csv"
+        checkpoint = tmp_path / "checkpoint.json"
+        exceptions = tmp_path / "exceptions.jsonl"
+        regs_db = tmp_path / "regs.sqlite3"
+
+        run_batch(watch_dir, out, checkpoint, exceptions, regs_db)
+
+        assert regs_db.exists()
+        conn = sqlite3.connect(regs_db)
+        count = conn.execute("SELECT COUNT(*) FROM registrations").fetchone()[0]
+        assert count == 1
+        with out.open(encoding="utf-8") as f:
+            rows = list(csv.reader(f, delimiter=";"))
+        assert len(rows) == 1  # the call, not the registration
+
+    def test_second_batch_run_does_not_reinsert_same_registration(self, tmp_path: Path):
+        watch_dir = tmp_path / "logs"
+        watch_dir.mkdir()
+        write_log(watch_dir / "log1.txt", LOCATION_REGISTRATION)
+
+        out = tmp_path / "billing_export.csv"
+        checkpoint = tmp_path / "checkpoint.json"
+        exceptions = tmp_path / "exceptions.jsonl"
+        regs_db = tmp_path / "regs.sqlite3"
+
+        run_batch(watch_dir, out, checkpoint, exceptions, regs_db)
+        run_batch(watch_dir, out, checkpoint, exceptions, regs_db)  # no new files
+
+        conn = sqlite3.connect(regs_db)
+        count = conn.execute("SELECT COUNT(*) FROM registrations").fetchone()[0]
+        assert count == 1
+
+
+class TestSingleFileSmokeTest:
+    def test_runs_without_a_registrations_db(self, tmp_path: Path, capsys):
+        log = tmp_path / "log1.txt"
+        write_log(log, _START, _CONNECTED, _BILLING, _END, LOCATION_REGISTRATION)
+        run_single_file_smoke_test(log)  # must not raise
+        assert "1 Gcdr records built" in capsys.readouterr().out
+
+    def test_runs_with_a_registrations_db(self, tmp_path: Path):
+        log = tmp_path / "log1.txt"
+        write_log(log, LOCATION_REGISTRATION)
+        regs_db = tmp_path / "regs.sqlite3"
+        run_single_file_smoke_test(log, regs_db)
+        conn = sqlite3.connect(regs_db)
+        count = conn.execute("SELECT COUNT(*) FROM registrations").fetchone()[0]
+        assert count == 1
