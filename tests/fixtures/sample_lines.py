@@ -76,6 +76,47 @@ CALL_STATE_CHANGE_CONNECTED = (
     'Id=n/a]}'
 )
 
+LOCATION_REGISTRATION = (
+    '[07/16/26 14:00:42] Mobility Update - Location Registration : STATUS {Local Zone ID = 1 ;'
+    ' Mobility Request Result = Accepted ; MU Generic Reason = n/a ; Current TalkGroups in Zone = 46 ; '
+    'Current Subscribers in Zone = 379} UNIT {Operating Unit ID = 5451(0x154B) "NUR UMN 5451" [Security Id=1] ;'
+    ' Fixed Unit WACN ID = n/a ; Fixed Unit System ID = n/a ; Fixed Unit ID = n/a ; Class of MS = (Auth enabled,'
+    ' Security Class 1 MS) ; Cipher Parameters Presence = Cipher Parameters is not presented ; '
+    'Additional Operating Unit ID = n/a "" ; Individual Access Method Type = Unknown ; '
+    'M-Capabilities Presence Flag = False ; QAM Capabilities Presence Flag = False} '
+    'GROUP {Operating Group ID = 144(0x90) "GNPS ORG2" [Security Id=1] ; Fixed Group WACN ID = -1(0xFFFFFFFF) ; '
+    'Fixed Group System ID = 65535(0xFFFF) ; Fixed Group ID = n/a ; Announcement Group ID = n/a "" [Security Id=n/a] ; '
+    'Replace Previous Group Affiliation Flag = True ; Access Method Type = Unknown ; '
+    'eTETRA Capability Operating Group Flag = False ; eTETRA Capability Announcement Group Flag = False ; '
+    'Previous Operating Group ID = n/a ""} REQUESTER {Device Type = Radio ; Protocol Type = APCO 25/TETRA ; '
+    'Affiliated Group ID = 144(0x90) "GNPS ORG2" [Security Id=1] ; Registered Zone = 1 ; Registered Site = 54 ; '
+    'Registered Type = Talkgroup Affiliation ; Forwarded Flag = False ; eTETRA Capability Flag = False ; '
+    'Previous Registered Site = n/a} SECURITY {Authentication Type = Implicit ; Encryption Key = Clear} '
+    'SITES {in Mobility Response = (54)} GROUP DETAILS {Subscribers in Operating Group = 26 ; '
+    'Subscribers in Prev Operating Group = 0 ; Sites in Operating Group = (54)} SITE DETAILS {TalkGroups in Site = 3 ; '
+    'Subscribers in Site = 31 ; TalkGroups in Previous Site = 0 ; Subscribers in Previous Site = 0}'
+)
+
+UNIT_REGISTRATION = (
+    '[07/15/26 14:37:00] Mobility Update - Unit Registration : STATUS {Local Zone ID = 2 ;'
+    ' Mobility Request Result = Accepted ; MU Generic Reason = n/a ; Current TalkGroups in Zone = 343 ; '
+    'Current Subscribers in Zone = 660} UNIT {Operating Unit ID = 3741010(0x391552) "3741010" [Security Id=1] ;'
+    ' Fixed Unit WACN ID = 71(0x47) ; Fixed Unit System ID = 250(0xFA) ; Fixed Unit ID = 3741010(0x391552) ; '
+    'Class of MS = (Auth enabled, Security Class 2/3 MS) ; Cipher Parameters = (TM-SCK OTARGCK '
+    'encryption/OTAR) ; Additional Operating Unit ID = n/a "" ; Individual Access Method Type = Unknown ; '
+    'M-Capabilities Presence Flag = False ; QAM Capabilities Presence Flag = False} '
+    'GROUP {Operating Group ID = n/a "" [Security Id=n/a] ; Fixed Group WACN ID = -1(0xFFFFFFFF) ; '
+    'Fixed Group System ID = 65535(0xFFFF) ; Fixed Group ID = n/a ; Announcement Group ID = n/a "" [Security Id=n/a] ; '
+    'Replace Previous Group Affiliation Flag = True ; Access Method Type = Unknown ; '
+    'eTETRA Capability Operating Group Flag = False ; eTETRA Capability Announcement Group Flag = False ; '
+    'Previous Operating Group ID = n/a ""} REQUESTER {Device Type = Radio ; Protocol Type = APCO 25/TETRA ; '
+    'Affiliated Group ID = n/a "" [Security Id=n/a] ; Registered Zone = 2 ; Registered Site = 8 ; '
+    'Registered Type = Regd Not Affiliated ; Forwarded Flag = False ; eTETRA Capability Flag = False ; '
+    'Previous Registered Site = n/a} SECURITY {Authentication Type = Explicit ; Encryption Key = Clear} '
+    'SITES {in Mobility Response = (8)} SITE DETAILS {TalkGroups in Site = 343 ; Subscribers in Site = 15 ; '
+    'TalkGroups in Previous Site = 0 ; Subscribers in Previous Site = 0}'
+)
+
 INTERCONNECT_BILLING = (
     '[07/16/26 14:00:47] Interconnect Call Billing Info Packet - MBX Info Type : '
     'CALL {Universal Call # (lower comp) = 83317 ; Controlling Zone ID = 1 ; '

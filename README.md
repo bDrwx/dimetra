@@ -17,12 +17,23 @@
 - `gcdr_builder.py` — maps a closed `RawCall` onto a `Gcdr`. Every non-obvious
   decision has a comment explaining what it's based on.
 - `fastcom_writer.py` — writes `Gcdr` rows via `Gcdr.__iter__` to a delimited file.
+- `registration_store.py` — `Mobility Update - Location/Unit Registration` events
+  aren't calls (no `Universal Call #`, no Start/End pair, one line is the whole
+  record), so they never touch `call_correlator.py`/`gcdr_builder.py` at all. Instead,
+  if `--registrations-db` is passed to `pipeline.py`, each one is recorded as-is (unit
+  id, registered zone/site, registration type, mobility result) into a local SQLite
+  `registrations` table, deduped on `(source_file, line_no)` so re-running against an
+  already-processed file doesn't double-insert. What downstream processing actually
+  needs from this isn't decided yet — see README below.
 - `pipeline.py` — orchestration + checkpointing. Two modes:
-  - `python pipeline.py path/to/log.txt` — one-off smoke test, prints a summary and
-    sample rows, no output file written.
-  - `python pipeline.py --watch-dir DIR --out billing_export.csv` — batch mode: picks
-    up new/rotated files, appends to the output CSV, tracks a JSON checkpoint so
-    files aren't reprocessed and in-flight calls survive a rotation boundary.
+  - `python pipeline.py path/to/log.txt [--registrations-db regs.sqlite3]` — one-off
+    smoke test, prints a summary and sample rows, no CSV written.
+  - `python pipeline.py --watch-dir DIR --out billing_export.csv [--registrations-db
+    regs.sqlite3]` — batch mode: picks up new/rotated files, appends to the output
+    CSV, tracks a JSON checkpoint so files aren't reprocessed and in-flight calls
+    survive a rotation boundary. `--registrations-db` is independent of that
+    checkpoint (registration rows are deduped by their own unique constraint instead)
+    but still only written from files this run actually scans.
 
 ## I could not run this
 
@@ -91,3 +102,8 @@ and phone number.
   not FastCom's real termination-code table.
 - `Dvo.switch` / `call_forvarding` / `edge_dxt_id` — no ДВО (supplementary service)
   signal was found in the sample log at all; left at defaults (`False`/`"--"`).
+- `registration_store.py`'s schema — captures the fields visible in the sample
+  Registration lines (unit id, registered zone/site, previous site, registration
+  type, mobility result), but nothing has been decided yet about what "processing it
+  later" actually needs (roaming history? last-known-site lookups? something else?),
+  so treat the column list as a starting point, not a spec.
