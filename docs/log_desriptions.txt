@@ -1,0 +1,30 @@
+﻿log.2026_07_15_10_00_00 - cdr файл в бинарном формате
+log.2026_07_15_10_00_00.txt - cdr файл в текстовом формате после конвертации из бинарного формата
+atia_log_viewer.rar - конвертер из бинарного в текстовый формат 
+
+Для поиска регистрации абонента ищем строки с текстом "Location Registration" или "Unit Registration", далее в этой строке "Operating Unit ID" - абонентский номер радиостанции, "Registered Site" - номер базовой станции (сайта) где регистрируется абонент и т.д.
+
+Для примера две строки из текстового CDR файла.
+
+[07/15/26 14:01:20] Mobility Update - Location Registration : STATUS {Local Zone ID = 2 ; Mobility Request Result = Authentication Timeout ; MU Generic Reason = n/a ; Current TalkGroups in Zone = 343 ; Current Subscribers in Zone = 654} UNIT {Operating Unit ID = 6150(0x1806) "6150" [Security Id=1] ; Fixed Unit WACN ID = n/a ; Fixed Unit System ID = n/a ; Fixed Unit ID = n/a ; Class of MS = (Auth enabled, Security Class 2/3 MS) ; Cipher Parameters = (TM-SCK OTARGCK encryption/OTAR) ; Additional Operating Unit ID = n/a "" ; Individual Access Method Type = Unknown ; M-Capabilities Presence Flag = False ; QAM Capabilities Presence Flag = False} GROUP {Operating Group ID = 3760037(0x395FA5) "Mugen-ORG33" [Security Id=1] ; Fixed Group WACN ID = -1(0xFFFFFFFF) ; Fixed Group System ID = 65535(0xFFFF) ; Fixed Group ID = n/a ; Announcement Group ID = n/a "" [Security Id=n/a] ; Replace Previous Group Affiliation Flag = True ; Access Method Type = Unknown ; eTETRA Capability Operating Group Flag = False ; eTETRA Capability Announcement Group Flag = False ; Previous Operating Group ID = n/a ""} REQUESTER {Device Type = Radio ; Protocol Type = APCO 25/TETRA ; Affiliated Group ID = 3760037(0x395FA5) "Mugen-ORG33" [Security Id=1] ; Registered Zone = 2 ; Registered Site = 46 ; Registered Type = Talkgroup Affiliation ; Forwarded Flag = False ; eTETRA Capability Flag = False ; Previous Registered Site = n/a} SECURITY {Authentication Type = Explicit ; Encryption Key = Clear} SITES {in Mobility Response = (46)} GROUP DETAILS {Subscribers in Operating Group = 29 ; Subscribers in Prev Operating Group = 0 ; Sites in Operating Group = (7,8,12,45,46,47,52)} SITE DETAILS {TalkGroups in Site = 1 ; Subscribers in Site = 25 ; TalkGroups in Previous Site = 0 ; Subscribers in Previous Site = 0}
+
+[07/15/26 14:37:00] Mobility Update - Unit Registration : STATUS {Local Zone ID = 2 ; Mobility Request Result = Accepted ; MU Generic Reason = n/a ; Current TalkGroups in Zone = 343 ; Current Subscribers in Zone = 660} UNIT {Operating Unit ID = 3741010(0x391552) "3741010" [Security Id=1] ; Fixed Unit WACN ID = 71(0x47) ; Fixed Unit System ID = 250(0xFA) ; Fixed Unit ID = 3741010(0x391552) ; Class of MS = (Auth enabled, Security Class 2/3 MS) ; Cipher Parameters = (TM-SCK OTARGCK encryption/OTAR) ; Additional Operating Unit ID = n/a "" ; Individual Access Method Type = Unknown ; M-Capabilities Presence Flag = False ; QAM Capabilities Presence Flag = False} GROUP {Operating Group ID = n/a "" [Security Id=n/a] ; Fixed Group WACN ID = -1(0xFFFFFFFF) ; Fixed Group System ID = 65535(0xFFFF) ; Fixed Group ID = n/a ; Announcement Group ID = n/a "" [Security Id=n/a] ; Replace Previous Group Affiliation Flag = True ; Access Method Type = Unknown ; eTETRA Capability Operating Group Flag = False ; eTETRA Capability Announcement Group Flag = False ; Previous Operating Group ID = n/a ""} REQUESTER {Device Type = Radio ; Protocol Type = APCO 25/TETRA ; Affiliated Group ID = n/a "" [Security Id=n/a] ; Registered Zone = 2 ; Registered Site = 8 ; Registered Type = Regd Not Affiliated ; Forwarded Flag = False ; eTETRA Capability Flag = False ; Previous Registered Site = n/a} SECURITY {Authentication Type = Explicit ; Encryption Key = Clear} SITES {in Mobility Response = (8)} SITE DETAILS {TalkGroups in Site = 343 ; Subscribers in Site = 15 ; TalkGroups in Previous Site = 0 ; Subscribers in Previous Site = 0} 
+
+Если в строке содержится:
+Call Activity Update - Start of Call - начало звонка; 
+Controlling Zone Update -  End of Call - завершение звонка,
+Call Type - тип звонка, возможный значения Individual Call - вызов с радиостанции на радиостанцию или на телефонный номер, Group Call - вызов в группу;
+Primary ID - номер абонента А;
+Secondary ID - номер абонента B (или номер группы);
+CALL {Universal Call # (lower comp) = уникальный идентификатор вызова;
+
+Если в строке содержится:
+Interconnect Call Billing Info Packet - MBX Info Type : CALL - информация о звонке на телефонный номер (АТС ВТС), 
+Duration in Seconds - время звонка в секундах;
+Type = Land to Mobile - вызов с телефоного номера АТС на радиостанцию;
+Type = Mobile to Land - вызов с радиостанции на телефонный номер;
+Subscriber ID - номер радиостанции;
+PHONE NUMBER {Phone Encoding = n/a ; Phone # = - номер телефона внешней АТС;
+
+
+
