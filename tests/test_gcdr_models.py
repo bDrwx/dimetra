@@ -143,6 +143,7 @@ class TestTextTermination:
             ("Called party not reachable", TextTermination.called_party_not_reachable),
             ("User busy", TextTermination.user_busy),
             ("Cause not defined or unknown", TextTermination.cause_not_defined_or_unknown),
+            ("Registration", TextTermination.registration),
         ],
     )
     def test_known_reasons_map_correctly(self, reason, expected):

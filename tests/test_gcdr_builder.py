@@ -12,6 +12,7 @@ from gcdr_builder import (
     IncompleteCallError,
     _build_interconnect_parties,
     _build_radio_subscriber,
+    _build_registration_parties,
     _infer_call_type,
     _site_to_location,
     build_gcdr,
@@ -21,6 +22,7 @@ from fixtures.sample_lines import (
     CALL_STATE_CHANGE_CONNECTED,
     END_OF_CALL,
     INTERCONNECT_BILLING,
+    LOCATION_REGISTRATION,
     START_OF_CALL_GROUP,
     START_OF_CALL_INDIVIDUAL,
 )
@@ -51,6 +53,10 @@ def build_full_group_call() -> RawCall:
 
 
 class TestInferCallType:
+    def test_registration_is_reg(self):
+        call = RawCall(call_id="1", is_registration=True)
+        assert _infer_call_type(call) is CallType.reg
+
     def test_non_interconnect_is_tcc(self):
         call = RawCall(call_id="1", is_interconnect=False)
         assert _infer_call_type(call) is CallType.tcc
@@ -134,6 +140,24 @@ class TestBuildInterconnectParties:
         abon_a, abon_b = _build_interconnect_parties(call)
         assert abon_a.number == "5217"
         assert abon_b.number == "67805418"
+
+
+class TestBuildRegistrationParties:
+    def test_composite_site_number_and_radio_id(self):
+        ev = tlp.parse_line(1, LOCATION_REGISTRATION)
+        call = CallCorrelator().feed(ev)
+        abon_a, abon_b = _build_registration_parties(call)
+        assert abon_a.number == "NUR UMN 5451"
+        assert abon_a.stype == UserType.inner
+        assert abon_a.start_location == 54
+        assert abon_b.number == f"{config.DXT_ID}54"
+        assert abon_b.stype == UserType.outer
+        assert abon_b.start_location == 54
+
+    def test_unparseable_unit_id_falls_back_to_unknown(self):
+        call = RawCall(call_id="1", registered_unit={"Operating Unit ID": "n/a"}, registered_site="7")
+        abon_a, _ = _build_registration_parties(call)
+        assert abon_a.number == "UNKNOWN"
 
 
 class TestBuildGcdrErrors:
@@ -220,3 +244,16 @@ class TestBuildGcdrSuccess:
         call = build_full_interconnect_call()
         gcdr = build_gcdr(call)
         assert gcdr.check_summ == 0
+
+    def test_registration_end_to_end(self):
+        ev = tlp.parse_line(1, LOCATION_REGISTRATION)
+        call = CallCorrelator().feed(ev)
+        gcdr = build_gcdr(call)
+        assert gcdr.call_type is CallType.reg
+        assert gcdr.abon_a.number == "NUR UMN 5451"
+        assert gcdr.abon_a.stype == UserType.inner
+        assert gcdr.abon_b.number == f"{config.DXT_ID}54"
+        assert gcdr.abon_b.stype == UserType.outer
+        assert int(gcdr.call_duration.total_seconds()) == 0
+        assert str(gcdr.if_in) == "--"
+        assert str(gcdr.if_out) == "--"

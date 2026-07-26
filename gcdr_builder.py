@@ -59,6 +59,8 @@ def _infer_call_type(call: RawCall) -> CallType:
     direction. 'sms' is never produced -- no SDS/short-data events were observed in the
     sample log at all.
     """
+    if call.is_registration:
+        return CallType.reg
     if not call.is_interconnect:
         return CallType.tcc  # pure radio-to-radio, stays inside TCC, no gateway leg
     if call.billing_direction == "Land to Mobile":
@@ -110,6 +112,35 @@ def _build_radio_subscriber(raw_field: dict, stype: UserType, location: int) -> 
     )
 
 
+def _build_registration_parties(call: RawCall) -> tuple[TextSubscriber, TextSubscriber]:
+    """
+    Registration events aren't calls -- there's no callee, just a radio checking in at
+    a site. Modeled here as a pseudo-call from the registering radio (abon_a, from
+    UNIT.Operating Unit ID) to a synthetic "site" number (abon_b): config.DXT_ID
+    concatenated directly with REQUESTER.Registered Site, e.g. "ZS-DXT-ID54" for site
+    54. abon_b.stype = UserType.outer since a site isn't a DXT subscriber. Neither the
+    composite format nor the stype is confirmed against anything FastCom/OASR actually
+    expects for registration rows -- see README.md.
+    """
+    parsed_unit = parse_composite_id(call.registered_unit.get("Operating Unit ID", ""))
+    location = _site_to_location(call.registered_site)
+    radio = TextSubscriber(
+        stype=UserType.inner,
+        number=(parsed_unit.label or parsed_unit.decimal) if parsed_unit else "UNKNOWN",
+        dxt_prefix={},
+        start_location=location,
+        end_location=location,
+    )
+    site = TextSubscriber(
+        stype=UserType.outer,
+        number=f"{config.DXT_ID}{call.registered_site}",
+        dxt_prefix={},
+        start_location=location,
+        end_location=location,
+    )
+    return radio, site
+
+
 def _build_interconnect_parties(call: RawCall) -> tuple[TextSubscriber, TextSubscriber]:
     """
     For interconnect calls, abon_a/abon_b are taken from the Interconnect Call Billing
@@ -157,7 +188,11 @@ def build_gcdr(call: RawCall) -> Gcdr:
     if anchor_ts is None:
         raise IncompleteCallError(f"call {call.call_id} has no usable timestamp")
 
-    if call.is_interconnect:
+    if call.is_registration:
+        abon_a, abon_b = _build_registration_parties(call)
+        if_in = TextInterface("--")
+        if_out = TextInterface("--")
+    elif call.is_interconnect:
         abon_a, abon_b = _build_interconnect_parties(call)
         if_in = TextInterface(call.route_number or "--")
         if_out = TextInterface(call.route_number or "--")

@@ -4,11 +4,14 @@
 
 - `text_log_parser.py` — decodes the UTF-16 DXT zone-controller log and tokenizes each
   line into a `LogEvent` (timestamp, category, subtype, nested `{block: {field: value}}`).
-- `call_correlator.py` — state machine keyed by `Universal Call # (lower comp)`. Only
-  four event kinds are billing-relevant (everything else — Control Channel Update,
-  Site Monitor Update, Location Registration, Radio Status ACKs, ~95%+ of the log — is
-  ignored). Emits a `RawCall` when an `End of Call` closes it. Persists still-open
-  calls across log-file rotation via `dump_state`/`load_state`.
+- `call_correlator.py` — state machine keyed by `Universal Call # (lower comp)`. Six
+  event kinds are billing-relevant (everything else — Control Channel Update, Site
+  Monitor Update, Radio Status ACKs, ... — is ignored). Emits a `RawCall` when an
+  `End of Call` closes it. Persists still-open calls across log-file rotation via
+  `dump_state`/`load_state`. `Mobility Update - Location/Unit Registration` events are
+  handled separately: each is a complete single-line record (no Universal Call #, no
+  Start/End pair), so `_on_registration` builds and returns an already-complete
+  `RawCall` immediately instead of tracking it as open state.
 - `gcdr_models.py` — your `UserType`/`CallType`/`NumberType`/`Subscriber`/`Dvo`/`Gcdr`
   classes, unchanged, plus three new adapters for the text-log source:
   `TextSubscriber` (bypasses the BCD/hex number decoding, since text-log IDs are
@@ -63,8 +66,19 @@ and phone number.
   `REQUESTER`/`TARGET` blocks. Only the site at call *start* is available from this
   event; `end_location` is set equal to `start_location` rather than tracking
   mid-call roaming (your original `Subscriber.get_last_location` does this properly
-  via a registration buffer, which needs "Mobility Update - Location Registration"
-  events wired in — not done here).
+  via a registration buffer, which would consume the Registration events described
+  below — not wired up that way here, they're emitted as their own rows instead).
+- Registration events (`Mobility Update - Location Registration` / `Unit
+  Registration`) are modeled as a pseudo-call: `abon_a` is the registering radio
+  (`UNIT.Operating Unit ID`), `abon_b` is a synthetic "site" number built by
+  concatenating `config.DXT_ID` with `REQUESTER.Registered Site` directly (e.g.
+  `"ZS-DXT-ID54"` for site 54), `call_duration` is always 0, and `call_type` uses a
+  new `CallType.reg = 9` member added for this (none of the existing 8 values mean
+  "registration"). `abon_b.stype` is `UserType.outer`. **None of this — the `reg`
+  call type value, the `DXT_ID`+site concatenation format, or the `outer` stype — is
+  confirmed against anything FastCom or OASR actually expects for registration rows.**
+  Confirm before this touches production billing output. See
+  `gcdr_builder._build_registration_parties`.
 - Roaming (`Dvo.rouming_dxt_id`) — set from `Local Zone ID` vs `Controlling Zone ID`
   mismatch on the call record, since that pattern showed up in the sample. Not
   confirmed against how FastCom actually wants roaming represented.

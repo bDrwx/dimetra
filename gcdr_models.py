@@ -58,6 +58,7 @@ class CallType(Enum):
     toc = 6
     sms = 7
     tcc = 8
+    reg = 9  # synthetic: Mobility Update - Location/Unit Registration, not a real call
 
 
 @unique
@@ -355,6 +356,8 @@ class TextTermination(Enum):
     called_party_not_reachable = 6
     user_busy = 7
     cause_not_defined_or_unknown = 8
+    registration = 9  # synthetic marker for Registration rows -- not a real End Of Call
+                        # Reason string, see call_correlator._on_registration
     other_unmapped = 99
 
     @classmethod
@@ -368,6 +371,7 @@ class TextTermination(Enum):
             "Called party not reachable": cls.called_party_not_reachable,
             "User busy": cls.user_busy,
             "Cause not defined or unknown": cls.cause_not_defined_or_unknown,
+            "Registration": cls.registration,
         }
         result = mapping.get(reason.strip())
         if result is None:

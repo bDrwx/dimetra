@@ -5,9 +5,8 @@ Groups the billing-relevant events emitted by text_log_parser into complete per-
 records, keyed by "Universal Call # (lower comp)" -- the id that appears on every event
 belonging to the same call, from Start of Call through End of Call.
 
-Only four event kinds carry billing information; everything else (Control Channel
-Update, Site Monitor Update, Location Registration, Radio Status ACKs, ...) is ignored
-here -- roughly 95%+ of a DXT log by line count.
+Only six event kinds carry billing information; everything else (Control Channel
+Update, Site Monitor Update, Radio Status ACKs, ...) is ignored here.
 
     Call Activity Update - Start of Call            call setup: type, caller, callee, site
     Call Activity Update - Call State Change         "...Connected" marks true talk start
@@ -15,6 +14,14 @@ here -- roughly 95%+ of a DXT log by line count.
                                                       authoritative duration + phone number
                                                       for PSTN-interconnected calls only
     End of Call - End of Call                        teardown timestamp + reason
+    Mobility Update - Location Registration          registration pseudo-call, see below
+    Mobility Update - Unit Registration               "        "        "     "    "
+
+Location/Unit Registration events aren't calls -- one line is the whole record, no
+Universal Call # to correlate on. _on_registration turns each into an already-complete
+RawCall (registering radio -> a synthetic "site" number) so it rides the same
+correlator/build_gcdr/write_gcdr_rows path as real calls; see gcdr_builder.py for how
+abon_a/abon_b are derived from it.
 
 Radio-to-radio calls (Individual/Group, no interconnect leg) never get a billing info
 packet, so their duration is computed from timestamps instead (connect-to-end if a
@@ -39,8 +46,16 @@ START_OF_CALL = "Call Activity Update - Start of Call"
 CALL_STATE_CHANGE = "Call Activity Update - Call State Change"
 INTERCONNECT_BILLING = "Interconnect Call Billing Info Packet - MBX Info Type"
 END_OF_CALL = "End of Call - End of Call"
+LOCATION_REGISTRATION = "Mobility Update - Location Registration"
+UNIT_REGISTRATION = "Mobility Update - Unit Registration"
 
-BILLING_RELEVANT_KINDS = {START_OF_CALL, CALL_STATE_CHANGE, INTERCONNECT_BILLING, END_OF_CALL}
+# Registration events are single-line, already-complete records (no Universal Call #,
+# no Start/End pair) -- handled separately in feed(), see _on_registration.
+REGISTRATION_KINDS = {LOCATION_REGISTRATION, UNIT_REGISTRATION}
+
+BILLING_RELEVANT_KINDS = (
+    {START_OF_CALL, CALL_STATE_CHANGE, INTERCONNECT_BILLING, END_OF_CALL} | REGISTRATION_KINDS
+)
 
 # Substring that marks the state-change event where a call actually becomes active
 # (as opposed to ringing/setup). Observed values include "INT Ring to Active",
@@ -69,6 +84,9 @@ class RawCall:
     requester: Dict[str, str] = field(default_factory=dict)  # raw REQUESTER block
     target: Dict[str, str] = field(default_factory=dict)  # raw TARGET block
     is_interconnect: bool = False
+    is_registration: bool = False  # True for a Location/Unit Registration pseudo-call
+    registered_unit: Dict[str, str] = field(default_factory=dict)  # raw UNIT block (registration only)
+    registered_site: str = "n/a"  # REQUESTER.Registered Site (registration only)
     billing_duration_seconds: Optional[int] = None
     billing_subscriber: Dict[str, str] = field(default_factory=dict)  # composite id fields
     billing_direction: str = ""  # "Land to Mobile" / "Mobile to Land"
@@ -134,6 +152,9 @@ class CallCorrelator:
         """
         if event.kind not in BILLING_RELEVANT_KINDS:
             return None
+
+        if event.kind in REGISTRATION_KINDS:
+            return self._on_registration(event)
 
         call_block = event.blocks.get("CALL", {})
         call_id = call_block.get("Universal Call # (lower comp)")
@@ -205,6 +226,33 @@ class CallCorrelator:
         call.billing_direction = call_block.get("Type", "")
         call.route_number = event.blocks.get("INTERCONNECT", {}).get("Route #", "")
         call.phone_number = event.blocks.get("PHONE NUMBER", {}).get("Phone #", "")
+
+    def _on_registration(self, event: LogEvent) -> RawCall:
+        """
+        A Location/Unit Registration line is the whole record -- there's no Universal
+        Call # to correlate on and no separate End event, so (unlike real calls) this
+        never touches self._open: it builds and returns an already-complete RawCall
+        directly, with start_ts == connect_ts == end_ts == the event's own timestamp
+        (duration 0). call_id is synthesized from the registering unit + line number
+        since nothing in the event itself is a natural id.
+        """
+        unit = event.blocks.get("UNIT", {})
+        requester = event.blocks.get("REQUESTER", {})
+        unit_id = unit.get("Operating Unit ID", "")
+        parsed_unit = parse_composite_id(unit_id)
+        unit_key = parsed_unit.decimal if parsed_unit else (unit_id or "UNKNOWN")
+        return RawCall(
+            call_id=f"REG-{unit_key}-{event.line_no}",
+            type_raw="Registration",
+            start_ts=event.timestamp,
+            connect_ts=event.timestamp,
+            end_ts=event.timestamp,
+            end_reason="Registration",
+            registered_unit=unit,
+            registered_site=requester.get("Registered Site", "n/a"),
+            is_registration=True,
+            complete=True,
+        )
 
     def _on_end(self, event: LogEvent, call_id: str, call_block: Dict[str, str]) -> RawCall:
         call = self._get_or_open(call_id)

@@ -11,9 +11,11 @@ from fixtures.sample_lines import (
     CALL_STATE_CHANGE_CONNECTED,
     END_OF_CALL,
     INTERCONNECT_BILLING,
+    LOCATION_REGISTRATION,
     NON_BILLING_CONTROL_CHANNEL_UPDATE,
     START_OF_CALL_GROUP,
     START_OF_CALL_INDIVIDUAL,
+    UNIT_REGISTRATION,
 )
 
 # The sampled Start-of-Call/Connected pair (call 83316) and the sampled billing/End
@@ -122,6 +124,43 @@ def test_end_of_call_for_unseen_call_still_closes_with_defaults():
     assert closed.complete is True
     assert closed.start_seen is False
     assert closed.start_ts is None
+
+
+class TestRegistration:
+    def test_location_registration_returns_a_complete_call_immediately(self):
+        correlator = CallCorrelator()
+        ev = tlp.parse_line(1, LOCATION_REGISTRATION)
+        closed = correlator.feed(ev)
+        assert isinstance(closed, RawCall)
+        assert closed.complete is True
+        assert closed.is_registration is True
+        assert correlator.open_calls == {}  # never touches _open
+
+    def test_unit_registration_also_handled(self):
+        correlator = CallCorrelator()
+        ev = tlp.parse_line(1, UNIT_REGISTRATION)
+        closed = correlator.feed(ev)
+        assert closed.is_registration is True
+        assert closed.registered_site == "8"
+        assert closed.registered_unit["Operating Unit ID"] == '3741010(0x391552) "3741010" [Security Id=1]'
+
+    def test_registration_timestamps_all_equal_event_timestamp(self):
+        ev = tlp.parse_line(1, LOCATION_REGISTRATION)
+        closed = CallCorrelator().feed(ev)
+        assert closed.start_ts == closed.connect_ts == closed.end_ts == ev.timestamp
+        assert closed.duration() == 0.0
+
+    def test_registration_site_extracted_from_requester_block(self):
+        ev = tlp.parse_line(1, LOCATION_REGISTRATION)
+        closed = CallCorrelator().feed(ev)
+        assert closed.registered_site == "54"
+
+    def test_registration_call_id_is_unique_per_line(self):
+        ev1 = tlp.parse_line(10, LOCATION_REGISTRATION)
+        ev2 = tlp.parse_line(11, LOCATION_REGISTRATION)
+        closed1 = CallCorrelator().feed(ev1)
+        closed2 = CallCorrelator().feed(ev2)
+        assert closed1.call_id != closed2.call_id
 
 
 class TestDuration:
