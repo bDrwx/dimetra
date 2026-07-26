@@ -12,7 +12,6 @@ import pytest
 from gcdr_models import (
     Dvo,
     Gcdr,
-    NumberType,
     Subscriber,
     TextInterface,
     TextSubscriber,

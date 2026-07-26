@@ -14,7 +14,6 @@ from __future__ import annotations
 import logging
 import zlib
 from datetime import timedelta
-from typing import Optional
 
 import config
 from call_correlator import RawCall
@@ -40,7 +39,7 @@ class IncompleteCallError(Exception):
     exceptions file by pipeline.py instead of the main output)."""
 
 
-def _site_to_location(value: Optional[str]) -> int:
+def _site_to_location(value: str | None) -> int:
     if value is None or value in ("n/a", ""):
         return LOCATION_UNKNOWN
     try:

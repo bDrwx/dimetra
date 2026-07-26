@@ -2,13 +2,14 @@
 Location/Unit Registration events, and dedup on (source_file, line_no)."""
 from pathlib import Path
 
-import text_log_parser as tlp
 from fixtures.sample_lines import (
     LOCATION_REGISTRATION,
     NON_BILLING_CONTROL_CHANNEL_UPDATE,
     START_OF_CALL_INDIVIDUAL,
     UNIT_REGISTRATION,
 )
+
+import text_log_parser as tlp
 from registration_store import connect, is_registration, record
 
 

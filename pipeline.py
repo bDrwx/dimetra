@@ -25,18 +25,16 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import sqlite3
 import sys
 from pathlib import Path
-from typing import Iterator, List, Tuple
 
-import sqlite3
-
+import registration_store
 from call_correlator import CallCorrelator, RawCall
+from fastcom_writer import write_gcdr_rows
 from gcdr_builder import IncompleteCallError, build_gcdr
 from gcdr_models import Gcdr
-from fastcom_writer import write_gcdr_rows
 from text_log_parser import iter_events
-import registration_store
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("pipeline")
@@ -46,7 +44,7 @@ def process_file(
     path: Path,
     correlator: CallCorrelator,
     reg_conn: sqlite3.Connection | None = None,
-) -> Tuple[List[Gcdr], List[Tuple[RawCall, str]]]:
+) -> tuple[list[Gcdr], list[tuple[RawCall, str]]]:
     """
     Run one log file through the correlator. Returns (gcdr_records, exceptions), where
     exceptions is [(raw_call, reason), ...] for calls that closed but couldn't be
@@ -59,8 +57,8 @@ def process_file(
     None, they're silently skipped (matches the correlator's own behavior pre-registration
     support, and the single-file smoke test that has no need for a database).
     """
-    records: List[Gcdr] = []
-    exceptions: List[Tuple[RawCall, str]] = []
+    records: list[Gcdr] = []
+    exceptions: list[tuple[RawCall, str]] = []
     n_events = 0
     n_registrations = 0
     for event in iter_events(path):
@@ -118,8 +116,8 @@ def run_batch(watch_dir: Path, out_path: Path, checkpoint_path: Path,
 
     reg_conn = registration_store.connect(registrations_db) if registrations_db else None
     try:
-        all_records: List[Gcdr] = []
-        all_exceptions: List[Tuple[RawCall, str]] = []
+        all_records: list[Gcdr] = []
+        all_exceptions: list[tuple[RawCall, str]] = []
         for path in new_files:
             records, exceptions = process_file(path, correlator, reg_conn)
             all_records.extend(records)

@@ -4,6 +4,13 @@ subscriber-id lookup) and the IncompleteCallError branches in build_gcdr."""
 from datetime import datetime
 
 import pytest
+from fixtures.sample_lines import (
+    CALL_STATE_CHANGE_CONNECTED,
+    END_OF_CALL,
+    INTERCONNECT_BILLING,
+    START_OF_CALL_GROUP,
+    START_OF_CALL_INDIVIDUAL,
+)
 
 import config
 import text_log_parser as tlp
@@ -16,14 +23,7 @@ from gcdr_builder import (
     _site_to_location,
     build_gcdr,
 )
-from gcdr_models import CallType, TextSubscriber, UserType
-from fixtures.sample_lines import (
-    CALL_STATE_CHANGE_CONNECTED,
-    END_OF_CALL,
-    INTERCONNECT_BILLING,
-    START_OF_CALL_GROUP,
-    START_OF_CALL_INDIVIDUAL,
-)
+from gcdr_models import CallType, UserType
 
 _CALL_ID = "83317"
 _START = tlp.parse_line(1, START_OF_CALL_INDIVIDUAL.replace("83316", _CALL_ID))

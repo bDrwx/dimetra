@@ -9,8 +9,8 @@ of FastCom's actual import spec.
 from __future__ import annotations
 
 import csv
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import config
 from gcdr_models import Gcdr
