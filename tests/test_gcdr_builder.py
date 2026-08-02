@@ -91,13 +91,13 @@ class TestBuildRadioSubscriber:
     def test_known_key_secondary_id_from_real_group_target_block(self):
         group_start = tlp.parse_line(1, START_OF_CALL_GROUP)
         sub = _build_radio_subscriber(group_start.blocks["TARGET"], UserType.group, 68)
-        assert sub.number == "Y-Balyk-ORG37"
+        assert sub.number == "3800015"
         assert sub.stype == UserType.group
 
     def test_falls_back_to_scanning_all_values_when_known_keys_absent(self):
         raw_field = {"Some Unexpected Key": '100(0x64) "TN-ORG-95" [Security Id=1]'}
         sub = _build_radio_subscriber(raw_field, UserType.group, 68)
-        assert sub.number == "TN-ORG-95"
+        assert sub.number == "100"
 
     def test_totally_unknown_block_returns_unknown_placeholder(self):
         sub = _build_radio_subscriber({"Affiliated Zone": "n/a"}, UserType.inner, 68)
@@ -188,7 +188,7 @@ class TestBuildGcdrSuccess:
         assert gcdr.abon_a.stype == UserType.inner
         assert gcdr.abon_b.stype == UserType.group
         assert gcdr.abon_a.number == "3917"
-        assert gcdr.abon_b.number == "Y-Balyk-ORG37"
+        assert gcdr.abon_b.number == "3800015"
         assert str(gcdr.if_in) == "--"
         assert str(gcdr.if_out) == "--"
 

@@ -76,7 +76,9 @@ def _build_radio_subscriber(raw_field: dict, stype: UserType, location: int) -> 
     'NNNN(0xHEX) "label" [Security Id=N]' value; group calls' TARGET may use a
     different key entirely (talkgroup field name wasn't confirmed against a full
     sample record) -- fall back to scanning all values for a composite id if the
-    known keys aren't present.
+    known keys aren't present. Always emits the decimal id, not the label -- for
+    individual radios the two are identical in every sample seen, but for group calls
+    the label is the talkgroup's name (e.g. "Y-Balyk-ORG37"), not a number.
     """
     for key in ("Primary ID", "Secondary ID", "Group ID", "Target ID"):
         if key in raw_field:
@@ -84,7 +86,7 @@ def _build_radio_subscriber(raw_field: dict, stype: UserType, location: int) -> 
             if parsed:
                 return TextSubscriber(
                     stype=stype,
-                    number=parsed.label or parsed.decimal,
+                    number=parsed.decimal,
                     dxt_prefix={},
                     start_location=location,
                     end_location=location,
@@ -94,7 +96,7 @@ def _build_radio_subscriber(raw_field: dict, stype: UserType, location: int) -> 
         if parsed:
             return TextSubscriber(
                 stype=stype,
-                number=parsed.label or parsed.decimal,
+                number=parsed.decimal,
                 dxt_prefix={},
                 start_location=location,
                 end_location=location,
