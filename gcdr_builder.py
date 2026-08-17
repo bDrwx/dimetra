@@ -59,7 +59,7 @@ def _infer_call_type(call: RawCall) -> CallType:
     sample log at all.
     """
     if not call.is_interconnect:
-        return CallType.tcc  # pure radio-to-radio, stays inside TCC, no gateway leg
+        return CallType.toctcc  # pure radio-to-radio, stays inside TCC, no gateway leg
     if call.billing_direction == "Land to Mobile":
         return CallType.ingtcc  # PSTN in -> TCC
     if call.billing_direction == "Mobile to Land":

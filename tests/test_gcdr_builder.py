@@ -51,9 +51,9 @@ def build_full_group_call() -> RawCall:
 
 
 class TestInferCallType:
-    def test_non_interconnect_is_tcc(self):
+    def test_non_interconnect_is_toctcc(self):
         call = RawCall(call_id="1", is_interconnect=False)
-        assert _infer_call_type(call) is CallType.tcc
+        assert _infer_call_type(call) is CallType.toctcc
 
     def test_land_to_mobile_is_ingtcc(self):
         call = RawCall(call_id="1", is_interconnect=True, billing_direction="Land to Mobile")
@@ -184,7 +184,7 @@ class TestBuildGcdrSuccess:
     def test_group_call_end_to_end(self):
         call = build_full_group_call()
         gcdr = build_gcdr(call)
-        assert gcdr.call_type is CallType.tcc
+        assert gcdr.call_type is CallType.toctcc
         assert gcdr.abon_a.stype == UserType.inner
         assert gcdr.abon_b.stype == UserType.group
         assert gcdr.abon_a.number == "3917"
