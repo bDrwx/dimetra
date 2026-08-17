@@ -29,7 +29,6 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, Optional
 
 from text_log_parser import LogEvent, parse_composite_id
 
@@ -58,26 +57,26 @@ class RawCall:
     call_id: str
     type_raw: str = ""  # "Individual Call" / "Group Call"
     radio_type_qualifier: str = ""  # e.g. "(Interconnect,Interconnect ring state,Astro call)"
-    start_ts: Optional[datetime] = None
-    connect_ts: Optional[datetime] = None
-    end_ts: Optional[datetime] = None
+    start_ts: datetime | None = None
+    connect_ts: datetime | None = None
+    end_ts: datetime | None = None
     end_reason: str = ""
     local_zone_id: str = "n/a"
     controlling_zone_id: str = "n/a"
     source_zone_id: str = "n/a"
     source_site_id: str = "n/a"
-    requester: Dict[str, str] = field(default_factory=dict)  # raw REQUESTER block
-    target: Dict[str, str] = field(default_factory=dict)  # raw TARGET block
+    requester: dict[str, str] = field(default_factory=dict)  # raw REQUESTER block
+    target: dict[str, str] = field(default_factory=dict)  # raw TARGET block
     is_interconnect: bool = False
-    billing_duration_seconds: Optional[int] = None
-    billing_subscriber: Dict[str, str] = field(default_factory=dict)  # composite id fields
+    billing_duration_seconds: int | None = None
+    billing_subscriber: dict[str, str] = field(default_factory=dict)  # composite id fields
     billing_direction: str = ""  # "Land to Mobile" / "Mobile to Land"
     phone_number: str = ""
     route_number: str = ""
     complete: bool = False  # True once an End of Call closed it
     start_seen: bool = True  # False if this call was already open when the file began
 
-    def duration(self) -> Optional[float]:
+    def duration(self) -> float | None:
         """Best billing duration in seconds: authoritative packet, else timestamps."""
         if self.billing_duration_seconds is not None:
             return float(self.billing_duration_seconds)
@@ -95,7 +94,7 @@ class RawCall:
         return d
 
     @classmethod
-    def from_json(cls, d: dict) -> "RawCall":
+    def from_json(cls, d: dict) -> RawCall:
         d = dict(d)
         for k in ("start_ts", "connect_ts", "end_ts"):
             d[k] = datetime.fromisoformat(d[k]) if d[k] else None
@@ -104,7 +103,7 @@ class RawCall:
 
 class CallCorrelator:
     def __init__(self) -> None:
-        self._open: Dict[str, RawCall] = {}
+        self._open: dict[str, RawCall] = {}
 
     # -- persistence, for calls spanning a log-file rotation ---------------------------
 
@@ -121,12 +120,12 @@ class CallCorrelator:
             self._open[cid] = call
 
     @property
-    def open_calls(self) -> Dict[str, RawCall]:
+    def open_calls(self) -> dict[str, RawCall]:
         return self._open
 
     # -- main entry point ---------------------------------------------------------------
 
-    def feed(self, event: LogEvent) -> Optional[RawCall]:
+    def feed(self, event: LogEvent) -> RawCall | None:
         """
         Feed one parsed LogEvent in. Returns a finalized RawCall when this event closes
         a call (End of Call), else None. Non-billing-relevant events are ignored
@@ -163,7 +162,7 @@ class CallCorrelator:
             self._open[call_id] = call
         return call
 
-    def _on_start(self, event: LogEvent, call_id: str, call_block: Dict[str, str]) -> None:
+    def _on_start(self, event: LogEvent, call_id: str, call_block: dict[str, str]) -> None:
         call = self._get_or_open(call_id)
         call.start_ts = event.timestamp
         call.start_seen = True
@@ -178,13 +177,13 @@ class CallCorrelator:
         if "Interconnect" in call.radio_type_qualifier:
             call.is_interconnect = True
 
-    def _on_state_change(self, event: LogEvent, call_id: str, call_block: Dict[str, str]) -> None:
+    def _on_state_change(self, event: LogEvent, call_id: str, call_block: dict[str, str]) -> None:
         call = self._get_or_open(call_id)
         transition = call_block.get("State Transition Field", "")
         if call.connect_ts is None and any(marker in transition for marker in _CONNECT_MARKERS):
             call.connect_ts = event.timestamp
 
-    def _on_billing(self, event: LogEvent, call_id: str, call_block: Dict[str, str]) -> None:
+    def _on_billing(self, event: LogEvent, call_id: str, call_block: dict[str, str]) -> None:
         call = self._get_or_open(call_id)
         call.is_interconnect = True
         dur = call_block.get("Duration in Seconds")
@@ -206,7 +205,7 @@ class CallCorrelator:
         call.route_number = event.blocks.get("INTERCONNECT", {}).get("Route #", "")
         call.phone_number = event.blocks.get("PHONE NUMBER", {}).get("Phone #", "")
 
-    def _on_end(self, event: LogEvent, call_id: str, call_block: Dict[str, str]) -> RawCall:
+    def _on_end(self, event: LogEvent, call_id: str, call_block: dict[str, str]) -> RawCall:
         call = self._get_or_open(call_id)
         call.end_ts = event.timestamp
         call.end_reason = call_block.get("End Of Call Reason", "n/a")

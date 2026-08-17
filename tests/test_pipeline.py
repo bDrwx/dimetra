@@ -6,8 +6,6 @@ import json
 import sqlite3
 from pathlib import Path
 
-import text_log_parser as tlp
-from call_correlator import CallCorrelator
 from fixtures.sample_lines import (
     CALL_STATE_CHANGE_CONNECTED,
     END_OF_CALL,
@@ -16,8 +14,16 @@ from fixtures.sample_lines import (
     NON_BILLING_CONTROL_CHANNEL_UPDATE,
     START_OF_CALL_INDIVIDUAL,
 )
-from pipeline import load_checkpoint, process_file, run_batch, run_single_file_smoke_test, save_checkpoint
+
 import registration_store
+from call_correlator import CallCorrelator
+from pipeline import (
+    load_checkpoint,
+    process_file,
+    run_batch,
+    run_single_file_smoke_test,
+    save_checkpoint,
+)
 
 _CALL_ID = "83317"
 _START = START_OF_CALL_INDIVIDUAL.replace("83316", _CALL_ID)

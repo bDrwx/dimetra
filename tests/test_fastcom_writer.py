@@ -5,7 +5,15 @@ from pathlib import Path
 
 import config
 from fastcom_writer import write_gcdr_rows
-from gcdr_models import CallType, Dvo, Gcdr, TextInterface, TextSubscriber, TextTermination, UserType
+from gcdr_models import (
+    CallType,
+    Dvo,
+    Gcdr,
+    TextInterface,
+    TextSubscriber,
+    TextTermination,
+    UserType,
+)
 
 
 def make_gcdr(number_a="67805418", number_b="5217", check_summ=1) -> Gcdr:

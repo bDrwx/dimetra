@@ -30,10 +30,10 @@ from __future__ import annotations
 
 import logging
 import re
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum, unique
-from typing import DefaultDict, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ class Location:
         self.crt, self.prev = crt, prev
 
     def __repr__(self) -> str:
-        return "Location(cur={}. prev={})".format(self.crt, self.prev)
+        return f"Location(cur={self.crt}. prev={self.prev})"
 
     def __iter__(self):
         yield self.crt
@@ -87,7 +87,7 @@ class Location:
 
 
 @dataclass
-class Subscriber(object):
+class Subscriber:
     """
     Абонент сети (радио/всс)
     stype: тип абонента (внешний/внутренний) относительно коммутатора Тетра
@@ -101,7 +101,7 @@ class Subscriber(object):
 
     stype: UserType
     number: str
-    dxt_prefix: Dict[str, int]
+    dxt_prefix: dict[str, int]
     start_location: int
     end_location: int
     isExist: bool = field(default=True)
@@ -118,7 +118,7 @@ class Subscriber(object):
         там номера уже приходят как обычные десятичные ISSI/talkgroup id и эта
         логика не применима.
         """
-        user_number: Optional[re.Match[str]] = re.match(
+        user_number: re.Match[str] | None = re.match(
             r"^([A-Fa-f0-9]{2})(\d)(\d+)", self.number)
         if user_number:
             phone_len = int(user_number.group(1), 16) - 1
@@ -142,7 +142,7 @@ class Subscriber(object):
                     return self._normalized_nitsi(dialed_digit, phone_len)
                 return dialed_digit
             case NumberType.NITSI:
-                nitsi: Optional[re.Match[str]] = re.match(
+                nitsi: re.Match[str] | None = re.match(
                     r"^(025000075)(\d+)", dialed_digit)
                 if nitsi:
                     return self._normalized_nitsi(nitsi.group(2), phone_len)
@@ -169,7 +169,7 @@ class Subscriber(object):
                     net_prefix = self.dxt_prefix.get(' ')
                     return f"{self.NET_CODE}{net_prefix}{nitsi}"
             case 6:
-                num: Optional[re.Match[str]] = re.match(
+                num: re.Match[str] | None = re.match(
                     r"^(\d{2})(\d{4})", nitsi)
                 if num:
                     net_prefix = self.dxt_prefix.get(num.group(1))
@@ -194,7 +194,7 @@ class Subscriber(object):
             return 0
         return self.start_location
 
-    def get_last_location(self, reg_buffer: DefaultDict[str, List], sd: datetime,
+    def get_last_location(self, reg_buffer: defaultdict[str, list], sd: datetime,
                            td: timedelta) -> None:
         if self.stype == UserType.inner:
             if td > timedelta(minutes=1):
@@ -249,9 +249,9 @@ class Gcdr:
     call_duration: timedelta
     abon_a: Subscriber
     abon_b: Subscriber
-    if_in: Optional["TextInterface"]
-    if_out: Optional["TextInterface"]
-    call_termination: "TextTermination"
+    if_in: TextInterface | None
+    if_out: TextInterface | None
+    call_termination: TextTermination
     dvo: Dvo
     call_type: CallType
     check_summ: int
@@ -285,7 +285,7 @@ class Gcdr:
             str(self.if_out),
             self.dvo.edge_dxt_id,
             self.dvo.rouming_dxt_id,
-            "{0:02d}".format(self.call_termination.value),
+            f"{self.call_termination.value:02d}",
             self.provider_id,
             self.abon_a.get_number(),
             self._normalized_location(self.abon_a.start_location),
@@ -358,7 +358,7 @@ class TextTermination(Enum):
     other_unmapped = 99
 
     @classmethod
-    def from_reason(cls, reason: str) -> "TextTermination":
+    def from_reason(cls, reason: str) -> TextTermination:
         mapping = {
             "Normal call clearing": cls.normal_call_clearing,
             "Disconnect Complete": cls.disconnect_complete,

@@ -3,10 +3,6 @@ duration() fallback logic, and dump_state/load_state round-tripping across a
 simulated log-rotation boundary."""
 from datetime import datetime
 
-import pytest
-
-import text_log_parser as tlp
-from call_correlator import CallCorrelator, RawCall
 from fixtures.sample_lines import (
     CALL_STATE_CHANGE_CONNECTED,
     END_OF_CALL,
@@ -15,6 +11,9 @@ from fixtures.sample_lines import (
     START_OF_CALL_GROUP,
     START_OF_CALL_INDIVIDUAL,
 )
+
+import text_log_parser as tlp
+from call_correlator import CallCorrelator, RawCall
 
 # The sampled Start-of-Call/Connected pair (call 83316) and the sampled billing/End
 # pair (call 83317) come from different calls in the source log. Unify them under one

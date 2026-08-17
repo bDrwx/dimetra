@@ -22,10 +22,10 @@ event types happens one layer up, in call_correlator.py.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Iterator, List
 
 # --------------------------------------------------------------------------------------
 # Line grammar
@@ -51,7 +51,7 @@ class LogEvent:
     timestamp: datetime
     category: str
     subtype: str
-    blocks: Dict[str, Dict[str, str]] = field(default_factory=dict)
+    blocks: dict[str, dict[str, str]] = field(default_factory=dict)
     raw: str = ""
 
     @property
@@ -63,9 +63,9 @@ class LogEvent:
         return self.blocks.get(block, {}).get(key, default)
 
 
-def _parse_block_body(body: str) -> Dict[str, str]:
+def _parse_block_body(body: str) -> dict[str, str]:
     """Split a block's ' k = v ; k = v ' content into a dict. Tolerant of stray fields."""
-    fields: Dict[str, str] = {}
+    fields: dict[str, str] = {}
     for chunk in body.split(";"):
         chunk = chunk.strip()
         if not chunk:
@@ -92,7 +92,7 @@ def parse_line(line_no: int, line: str) -> LogEvent | None:
         return None
 
     ts = datetime.strptime(m.group("ts"), _TIMESTAMP_FMT)
-    blocks: Dict[str, Dict[str, str]] = {}
+    blocks: dict[str, dict[str, str]] = {}
     for block_name, block_body in _BLOCK_RE.findall(m.group("body")):
         blocks[block_name.strip()] = _parse_block_body(block_body)
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
 
     p = Path(sys.argv[1])
     count = 0
-    kinds: Dict[str, int] = {}
+    kinds: dict[str, int] = {}
     for ev in iter_events(p):
         count += 1
         kinds[ev.kind] = kinds.get(ev.kind, 0) + 1

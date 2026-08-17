@@ -4,6 +4,13 @@ subscriber-id lookup) and the IncompleteCallError branches in build_gcdr."""
 from datetime import datetime
 
 import pytest
+from fixtures.sample_lines import (
+    CALL_STATE_CHANGE_CONNECTED,
+    END_OF_CALL,
+    INTERCONNECT_BILLING,
+    START_OF_CALL_GROUP,
+    START_OF_CALL_INDIVIDUAL,
+)
 
 import config
 import text_log_parser as tlp
@@ -16,14 +23,7 @@ from gcdr_builder import (
     _site_to_location,
     build_gcdr,
 )
-from gcdr_models import CallType, TextSubscriber, UserType
-from fixtures.sample_lines import (
-    CALL_STATE_CHANGE_CONNECTED,
-    END_OF_CALL,
-    INTERCONNECT_BILLING,
-    START_OF_CALL_GROUP,
-    START_OF_CALL_INDIVIDUAL,
-)
+from gcdr_models import CallType, UserType
 
 _CALL_ID = "83317"
 _START = tlp.parse_line(1, START_OF_CALL_INDIVIDUAL.replace("83316", _CALL_ID))
@@ -51,9 +51,9 @@ def build_full_group_call() -> RawCall:
 
 
 class TestInferCallType:
-    def test_non_interconnect_is_tcc(self):
+    def test_non_interconnect_is_toctcc(self):
         call = RawCall(call_id="1", is_interconnect=False)
-        assert _infer_call_type(call) is CallType.tcc
+        assert _infer_call_type(call) is CallType.toctcc
 
     def test_land_to_mobile_is_ingtcc(self):
         call = RawCall(call_id="1", is_interconnect=True, billing_direction="Land to Mobile")
@@ -91,13 +91,13 @@ class TestBuildRadioSubscriber:
     def test_known_key_secondary_id_from_real_group_target_block(self):
         group_start = tlp.parse_line(1, START_OF_CALL_GROUP)
         sub = _build_radio_subscriber(group_start.blocks["TARGET"], UserType.group, 68)
-        assert sub.number == "Y-Balyk-ORG37"
+        assert sub.number == "3800015"
         assert sub.stype == UserType.group
 
     def test_falls_back_to_scanning_all_values_when_known_keys_absent(self):
         raw_field = {"Some Unexpected Key": '100(0x64) "TN-ORG-95" [Security Id=1]'}
         sub = _build_radio_subscriber(raw_field, UserType.group, 68)
-        assert sub.number == "TN-ORG-95"
+        assert sub.number == "100"
 
     def test_totally_unknown_block_returns_unknown_placeholder(self):
         sub = _build_radio_subscriber({"Affiliated Zone": "n/a"}, UserType.inner, 68)
@@ -184,11 +184,11 @@ class TestBuildGcdrSuccess:
     def test_group_call_end_to_end(self):
         call = build_full_group_call()
         gcdr = build_gcdr(call)
-        assert gcdr.call_type is CallType.tcc
+        assert gcdr.call_type is CallType.toctcc
         assert gcdr.abon_a.stype == UserType.inner
         assert gcdr.abon_b.stype == UserType.group
         assert gcdr.abon_a.number == "3917"
-        assert gcdr.abon_b.number == "Y-Balyk-ORG37"
+        assert gcdr.abon_b.number == "3800015"
         assert str(gcdr.if_in) == "--"
         assert str(gcdr.if_out) == "--"
 

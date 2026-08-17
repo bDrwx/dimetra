@@ -4,8 +4,6 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-
-import text_log_parser as tlp
 from fixtures.sample_lines import (
     BANNER_LINE,
     END_OF_CALL,
@@ -14,6 +12,8 @@ from fixtures.sample_lines import (
     START_OF_CALL_GROUP,
     START_OF_CALL_INDIVIDUAL,
 )
+
+import text_log_parser as tlp
 
 
 class TestParseLine:
